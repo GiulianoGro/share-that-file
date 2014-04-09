@@ -1,7 +1,7 @@
 var ShareThatFile = function(options){
   options = options || {};
-  this.id = Math.random();
-  this.peer = new Peer(this.id, {key: 'ic8cujjvy3bit3xr'});
+  this.id = Math.round(Math.random() * 1000000);
+  this.peer = new Peer(this.id, {key: 'ic8cujjvy3bit3xr', debug: 3});
   this.inputFile = options.inputFile;
   this.myFilesContainer = options.myFilesContainer;
   this.searchElement = options.searchField;
@@ -17,14 +17,25 @@ ShareThatFile.prototype.initApplication = function(){
   this.myFilesContainer.addEventListener('click', this.removeFile.bind(this), false);
   this.searchButton.addEventListener('click', function(){ this.searchAndExpose.doSearch(this.searchElement.value); }.bind(this), false);
   this.searchResults.addEventListener('click', this.askForFile.bind(this), false);
+  this.peer.on('connection', this.handleFile.bind(this));
   this.initEventSource();
   this.refreshList();
 };
 
 ShareThatFile.prototype.askForFile = function(evt){
   if(evt.target.hasAttribute('data-owner')){
-    this.searchAndExpose.askForFile(evt.target.getAttribute('data-owner'),evt.target.textContent);
+    var owner = evt.target.getAttribute('data-owner');
+    this.searchAndExpose.askForFile(owner, evt.target.textContent);
   }
+};
+
+ShareThatFile.prototype.handleFile = function(connection){
+  connection.on('data', function(data){
+    var dataObj = JSON.parse(data);
+    var target = this.searchResults.querySelector('a[data-owner="' + dataObj.owner + '"][data-file-id="' + dataObj.id + '"');
+    target.setAttribute('href', dataObj.body);
+    connection.close();
+  }.bind(this));
 };
 
 ShareThatFile.prototype.initEventSource = function(){
@@ -37,6 +48,21 @@ ShareThatFile.prototype.initEventSource = function(){
     var data = JSON.parse(evt.data);
     this.searchAndExpose.updateResults(data.term, data.owner, data.files);
   }.bind(this), false);
+  this.eventSource.addEventListener('askforfile',function(evt){
+    var data = JSON.parse(evt.data);
+    this.seedArchive.getFileByName(data.filename, this.sendToPeer.bind(this,data));
+  }.bind(this), false);
+};
+
+ShareThatFile.prototype.sendToPeer = function(data, file){
+  var tempConnection = this.peer.connect(data.owner);
+  tempConnection.on('open', function(){
+    tempConnection.send(JSON.stringify({
+      body: file.body,
+      owner: this.id,
+      id: file.id
+    }));
+  }.bind(this));
 };
 
 ShareThatFile.prototype.addNewFile = function(event){
@@ -78,7 +104,7 @@ ShareThatFile.prototype.updateSearchResults = function(results){
       resultsHTML += "<b>" + result + "</b><ul>";
       for(var x = 0; x < results[result].results.length; x++){
         var currentResult = results[result].results[x];
-        resultsHTML += "<li><a data-owner='" + currentResult.owner + "'>" + currentResult.name + "</a></li>";   
+        resultsHTML += "<li><a target='_blank' data-file-id='" + currentResult.id + "' data-owner='" + currentResult.owner + "'>" + currentResult.name + "</a></li>";   
       }
       resultsHTML += "</ul>";
     }

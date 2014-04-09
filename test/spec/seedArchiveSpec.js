@@ -81,4 +81,16 @@ describe("seedArchive", function() {
     });
   });
   
+  it("does a search on a specific file name", function(done){
+    var seed = new SeedArchive(12, 'myFilesTest', function(){
+      this.addFiles([{name: 'rambo2.jpg'}, {name: 'james bond.jpg'}], function(){
+        this.getFileByName('rambo2.jpg',function(file){
+          expect(file).toBeDefined();
+          expect(file.name).toEqual('rambo2.jpg');
+          done();
+        });
+      });
+    });    
+  });
+  
 });

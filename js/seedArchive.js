@@ -122,8 +122,8 @@ SeedArchive.prototype.getFileByName = function(name, callback){
   var getFiles = this.dataBase.transaction('files');
   var fileStore = getFiles.objectStore('files');
   var nameIndex = fileStore.index("name");
-  nameIndex.get(name);
-  nameIndex.addEventListener('success', function(event){
+  var nameQuery = nameIndex.get(name);
+  nameQuery.addEventListener('success', function(event){
     callback.call(this, event.target.result);
   }.bind(this), false);
 };

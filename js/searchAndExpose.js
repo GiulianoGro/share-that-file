@@ -50,6 +50,7 @@ SearchAndExpose.prototype.updateResults = function(term, owner, results){
 SearchAndExpose.prototype.askForFile = function(fileowner,filename){
   this.postRequest({
     event: 'askforfile',
-    message: JSON.stringify({owner: this.id, fileowner: fileowner ,filename: filename})
+    receiver: fileowner,
+    message: JSON.stringify({owner: this.id, filename: filename})
   });
 }
